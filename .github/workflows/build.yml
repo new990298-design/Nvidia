@@ -1,1 +1,38 @@
+name: Build APK
 
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract
+        run: |
+          sudo apt-get install -y p7zip-full
+          mkdir proj
+          7z x github.npi-android.7z -oproj -y
+          D=$(dirname "$(find proj -name settings.gradle.kts | head -1)")
+          echo "PROJ=$D" >> $GITHUB_ENV
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+
+      - name: Build
+        run: gradle assembleDebug
+        working-directory: ${{ env.PROJ }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NPICompanion-apk
+          path: ${{ env.PROJ }}/app/build/outputs/apk/debug/app-debug.apk
